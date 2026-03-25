@@ -23,6 +23,14 @@ npm run test:watch   # run tests in watch mode
 - **Pure core:** All parsing and rollover computation is in `rollover.ts` with no side effects, making it easy to test without mocking Obsidian APIs.
 - **Nested checkboxes:** Unchecked items roll over with their full subtree. Checked parents with unchecked descendants are included as context (preserving their `[x]` state).
 
+## Releasing
+
+1. Bump `version` in `manifest.json` (and `versions.json` if needed)
+2. Commit the version bump
+3. `npm run release`
+
+The script (`scripts/release.mjs`) builds, creates a git tag matching the version, pushes the tag, and creates a GitHub release with `main.js` and `manifest.json` as assets.
+
 ## Installing into Obsidian
 
 Copy `main.js` and `manifest.json` into `<vault>/.obsidian/plugins/sludge-pump/`, then enable the plugin in Obsidian settings.
