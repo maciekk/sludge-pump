@@ -1,5 +1,5 @@
 {
-  "name": "obsidian-task-rollover",
+  "name": "sludge-pump",
   "version": "0.1.0",
   "description": "Roll over unchecked tasks from recent daily notes into today's note.",
   "main": "main.js",

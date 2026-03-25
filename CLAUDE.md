@@ -25,4 +25,4 @@ npm run test:watch   # run tests in watch mode
 
 ## Installing into Obsidian
 
-Copy `main.js` and `manifest.json` into `<vault>/.obsidian/plugins/task-rollover/`, then enable the plugin in Obsidian settings.
+Copy `main.js` and `manifest.json` into `<vault>/.obsidian/plugins/sludge-pump/`, then enable the plugin in Obsidian settings.

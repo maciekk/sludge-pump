@@ -332,7 +332,7 @@ class RolloverConfirmModal extends Modal {
     contentEl.empty();
     contentEl.addClass("task-rollover-confirm");
 
-    contentEl.createEl("h2", { text: "Task Rollover Preview" });
+    contentEl.createEl("h2", { text: "Sludge Pump — Rollover Preview" });
     contentEl.createEl("p", {
       text: "Review the changes below. Backups will be created before any files are modified.",
       cls: "task-rollover-subtitle",
@@ -437,7 +437,7 @@ class TaskRolloverSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    containerEl.createEl("h2", { text: "Task Rollover Settings" });
+    containerEl.createEl("h2", { text: "Sludge Pump Settings" });
 
     new Setting(containerEl)
       .setName("Daily notes folder")
