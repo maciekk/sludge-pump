@@ -333,7 +333,7 @@ describe("computeRollover", () => {
 // ── insertRollovers ─────────────────────────────────────────────────────
 
 describe("insertRollovers", () => {
-  it("inserts rollover sections after Tasks heading", () => {
+  it("inserts rollover sections after existing Tasks content", () => {
     const today = [
       "# 2026-03-25",
       "## Tasks",
@@ -350,16 +350,34 @@ describe("insertRollovers", () => {
     const lines = result.split("\n");
     expect(lines[0]).toBe("# 2026-03-25");
     expect(lines[1]).toBe("## Tasks");
-    expect(lines[2]).toBe(""); // blank line before first rollover
+    expect(lines[2]).toBe("");
+    expect(lines[3]).toBe("My existing items");
+    expect(lines[4]).toBe("- [ ] Today's task");
+    // Rollovers follow existing content
+    expect(lines[5]).toBe("");
+    expect(lines[6]).toBe("Rollovers from 2026-03-24");
+    expect(lines[7]).toBe("- [ ] Yesterday's task");
+    expect(lines[8]).toBe("");
+    expect(lines[9]).toBe("Rollovers from 2026-03-23");
+    expect(lines[10]).toBe("- [ ] Older task");
+  });
+
+  it("inserts rollover sections right after heading when Tasks section is empty", () => {
+    const today = [
+      "# 2026-03-25",
+      "## Tasks",
+    ].join("\n");
+
+    const result = insertRollovers(today, "Tasks", [
+      { dateStr: "2026-03-24", lines: ["- [ ] Yesterday's task"] },
+    ]);
+
+    const lines = result.split("\n");
+    expect(lines[0]).toBe("# 2026-03-25");
+    expect(lines[1]).toBe("## Tasks");
+    expect(lines[2]).toBe("");
     expect(lines[3]).toBe("Rollovers from 2026-03-24");
     expect(lines[4]).toBe("- [ ] Yesterday's task");
-    expect(lines[5]).toBe(""); // blank line before second rollover
-    expect(lines[6]).toBe("Rollovers from 2026-03-23");
-    expect(lines[7]).toBe("- [ ] Older task");
-    // Original content follows
-    expect(lines[8]).toBe("");
-    expect(lines[9]).toBe("My existing items");
-    expect(lines[10]).toBe("- [ ] Today's task");
   });
 
   it("throws when heading is missing", () => {

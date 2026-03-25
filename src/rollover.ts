@@ -326,18 +326,39 @@ export function insertRollovers(
     `^#{1,6}\\s+${escapeRegex(tasksHeading)}\\s*$`
   );
 
-  let insertIdx = -1;
+  let sectionStart = -1;
+  let headingLevel = 2;
   for (let i = 0; i < lines.length; i++) {
-    if (headingPattern.test(lines[i])) {
-      insertIdx = i + 1;
+    const m = lines[i].match(headingPattern);
+    if (m) {
+      sectionStart = i;
+      const levelMatch = lines[i].match(/^(#{1,6})\s/);
+      headingLevel = levelMatch ? levelMatch[1].length : 2;
       break;
     }
   }
 
-  if (insertIdx === -1) {
+  if (sectionStart === -1) {
     throw new Error(
       `"## ${tasksHeading}" heading not found in today's daily note.`
     );
+  }
+
+  // Find the end of the section (next same-or-higher-level heading, or EOF)
+  let sectionEnd = lines.length;
+  for (let i = sectionStart + 1; i < lines.length; i++) {
+    const m = lines[i].match(/^(#{1,6})\s/);
+    if (m && m[1].length <= headingLevel) {
+      sectionEnd = i;
+      break;
+    }
+  }
+
+  // Insert after existing content in the section, before the next heading
+  // Skip trailing blank lines to place rollovers at the true end of content
+  let insertIdx = sectionEnd;
+  while (insertIdx > sectionStart + 1 && lines[insertIdx - 1].trim() === "") {
+    insertIdx--;
   }
 
   const rolloverText: string[] = [];
