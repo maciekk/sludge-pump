@@ -259,6 +259,12 @@ export function computeRollover(
     }
 
     if (groupRolloverLines.length > 0) {
+      // Add spacing: blank line before heading lines, or between groups
+      if (group.headingLines.length > 0) {
+        allRolloverLines.push("");
+      } else if (allRolloverLines.length > 0) {
+        allRolloverLines.push("");
+      }
       // Include group heading for context
       allRolloverLines.push(...group.headingLines);
       allRolloverLines.push(...groupRolloverLines);

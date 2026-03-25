@@ -179,6 +179,7 @@ describe("computeRollover", () => {
 
     const result = computeRollover(content, "Tasks")!;
     expect(result.rolloverLines).toEqual([
+      "",
       "Crash list",
       "- [ ] Fix bug A",
     ]);
@@ -190,6 +191,33 @@ describe("computeRollover", () => {
     // Feature work should be untouched
     expect(result.newContent).toContain("Feature work");
     expect(result.newContent).toContain("- [x] Ship feature");
+  });
+
+  it("adds blank lines between multiple rolled-over groups", () => {
+    const content = [
+      "# Daily",
+      "## Tasks",
+      "",
+      "Crash list",
+      "- [ ] Fix bug A",
+      "",
+      "Feature work",
+      "- [ ] Ship feature",
+      "",
+      "- [ ] Standalone task",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.rolloverLines).toEqual([
+      "",
+      "Crash list",
+      "- [ ] Fix bug A",
+      "",
+      "Feature work",
+      "- [ ] Ship feature",
+      "",
+      "- [ ] Standalone task",
+    ]);
   });
 
   it("removes group heading when all items are rolled over", () => {
