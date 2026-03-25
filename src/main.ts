@@ -270,7 +270,11 @@ export default class TaskRolloverPlugin extends Plugin {
     for (let i = 1; i <= parts.length; i++) {
       const dirPath = parts.slice(0, i).join("/");
       if (!this.app.vault.getAbstractFileByPath(dirPath)) {
-        await this.app.vault.createFolder(dirPath);
+        try {
+          await this.app.vault.createFolder(dirPath);
+        } catch {
+          // Folder may already exist (vault index lag); ignore.
+        }
       }
     }
   }
