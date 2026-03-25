@@ -1,7 +1,7 @@
 {
   "id": "sludge-pump",
   "name": "Sludge Pump",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "minAppVersion": "1.0.0",
   "description": "Roll over unchecked tasks from recent daily notes into today's note.",
   "author": "maciekk (GitHub)",
