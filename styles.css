@@ -1,0 +1,61 @@
+.task-rollover-confirm {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.task-rollover-subtitle {
+  color: var(--text-muted);
+  margin-bottom: 1em;
+}
+
+.task-rollover-file {
+  margin-bottom: 1.2em;
+}
+
+.task-rollover-file-heading {
+  font-size: 0.95em;
+  margin-bottom: 0.4em;
+}
+
+.task-rollover-diff {
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  padding: 0.6em 0.8em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0;
+}
+
+.task-rollover-removed {
+  background-color: rgba(255, 0, 0, 0.06);
+  border: 1px solid rgba(255, 0, 0, 0.15);
+}
+
+.task-rollover-added {
+  background-color: rgba(0, 180, 0, 0.06);
+  border: 1px solid rgba(0, 180, 0, 0.15);
+}
+
+.task-rollover-diff-line {
+  white-space: pre;
+  line-height: 1.5;
+}
+
+.task-rollover-removed .task-rollover-diff-marker {
+  color: var(--text-error);
+  font-weight: 600;
+}
+
+.task-rollover-added .task-rollover-diff-marker {
+  color: var(--interactive-success);
+  font-weight: 600;
+}
+
+.task-rollover-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6em;
+  margin-top: 1.2em;
+  padding-top: 0.8em;
+  border-top: 1px solid var(--background-modifier-border);
+}

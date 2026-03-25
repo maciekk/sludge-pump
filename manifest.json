@@ -1,0 +1,9 @@
+{
+  "id": "task-rollover",
+  "name": "Task Rollover",
+  "version": "0.1.0",
+  "minAppVersion": "1.0.0",
+  "description": "Roll over unchecked tasks from recent daily notes into today's note.",
+  "author": "maciek",
+  "isDesktopOnly": false
+}
