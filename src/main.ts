@@ -20,7 +20,7 @@ interface TaskRolloverSettings {
 }
 
 const DEFAULT_SETTINGS: TaskRolloverSettings = {
-  dailyNotesFolder: "Daily Notes",
+  dailyNotesFolder: "_journal/day/YYYY",
   dateFormat: "YYYY-MM-DD",
   lookbackDays: 7,
   tasksHeading: "Tasks",
@@ -60,16 +60,30 @@ export default class TaskRolloverPlugin extends Plugin {
 
   // ── Rollover command ────────────────────────────────────────────────
 
+  /**
+   * Resolve the vault-relative path for a daily note on a given date.
+   * The folder setting may contain date tokens (YYYY, MM, DD) that get
+   * replaced with values from the date — e.g. `_journal/day/YYYY` becomes
+   * `_journal/day/2026` for any date in 2026.
+   */
+  private dailyNotePath(date: any): string {
+    const dateStr = date.format(this.settings.dateFormat);
+    const raw = this.settings.dailyNotesFolder.replace(/^\/|\/$/g, "");
+    const folder = raw
+      .replace(/YYYY/g, date.format("YYYY"))
+      .replace(/YY/g, date.format("YY"))
+      .replace(/MM/g, date.format("MM"))
+      .replace(/DD/g, date.format("DD"));
+    return folder ? `${folder}/${dateStr}.md` : `${dateStr}.md`;
+  }
+
   private async rolloverTasks() {
     try {
       const moment = (window as any).moment;
       const today = moment();
       const todayStr = today.format(this.settings.dateFormat);
 
-      const folder = this.settings.dailyNotesFolder.replace(/^\/|\/$/g, "");
-      const todayPath = folder
-        ? `${folder}/${todayStr}.md`
-        : `${todayStr}.md`;
+      const todayPath = this.dailyNotePath(today);
 
       const todayFile = this.app.vault.getAbstractFileByPath(todayPath);
       if (!(todayFile instanceof TFile)) {
@@ -89,9 +103,7 @@ export default class TaskRolloverPlugin extends Plugin {
       for (let i = 1; i <= this.settings.lookbackDays; i++) {
         const date = moment().subtract(i, "days");
         const dateStr = date.format(this.settings.dateFormat);
-        const path = folder
-          ? `${folder}/${dateStr}.md`
-          : `${dateStr}.md`;
+        const path = this.dailyNotePath(date);
 
         const file = this.app.vault.getAbstractFileByPath(path);
         if (!(file instanceof TFile)) continue;
@@ -425,10 +437,13 @@ class TaskRolloverSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Daily notes folder")
-      .setDesc("Path to the folder containing daily notes (vault-relative)")
+      .setDesc(
+        "Vault-relative path. May contain date tokens: YYYY, MM, DD " +
+        "(e.g. _journal/day/YYYY)"
+      )
       .addText((text) =>
         text
-          .setPlaceholder("Daily Notes")
+          .setPlaceholder("_journal/day/YYYY")
           .setValue(this.plugin.settings.dailyNotesFolder)
           .onChange(async (value) => {
             this.plugin.settings.dailyNotesFolder = value;
