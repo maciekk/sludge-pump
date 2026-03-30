@@ -41,12 +41,12 @@ export interface RolloverComputation {
 export function parseListItem(
   line: string
 ): { indent: number; isCheckbox: boolean; isChecked: boolean } | null {
-  const cbMatch = line.match(/^(\s*)-\s+\[([ xX])\]/);
+  const cbMatch = line.match(/^(\s*)-\s+\[(.)\]/);
   if (cbMatch) {
     return {
       indent: cbMatch[1].length,
       isCheckbox: true,
-      isChecked: cbMatch[2] !== " ",
+      isChecked: cbMatch[2] === "x" || cbMatch[2] === "X",
     };
   }
   const listMatch = line.match(/^(\s*)-\s+/);
@@ -282,7 +282,7 @@ export function computeRollover(
       }
 
       uncheckedCount += groupRolloverLines.filter((l) =>
-        /^\s*-\s+\[ \]/.test(l)
+        /^\s*-\s+\[(?![xX]).\]/.test(l)
       ).length;
     }
   }

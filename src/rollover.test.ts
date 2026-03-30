@@ -37,6 +37,24 @@ describe("parseListItem", () => {
     });
   });
 
+  it("parses in-progress [/] as unchecked", () => {
+    expect(parseListItem("- [/] In progress")).toEqual({
+      indent: 0,
+      isCheckbox: true,
+      isChecked: false,
+    });
+  });
+
+  it("parses other extended markers ([-], [?], [!]) as unchecked", () => {
+    for (const marker of ["-", "?", "!"]) {
+      expect(parseListItem(`- [${marker}] Item`)).toEqual({
+        indent: 0,
+        isCheckbox: true,
+        isChecked: false,
+      });
+    }
+  });
+
   it("parses indented checkbox", () => {
     expect(parseListItem("  - [ ] Sub-task")).toEqual({
       indent: 2,
@@ -316,6 +334,34 @@ describe("computeRollover", () => {
     expect(result.newContent).toContain("## Notes");
     expect(result.newContent).toContain("Some notes here.");
     expect(result.newContent).not.toContain("Do something");
+  });
+
+  it("rolls over in-progress [/] items and keeps only [x] in old note", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Not started",
+      "- [/] In progress",
+      "- [x] Done",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.rolloverLines).toEqual([
+      "- [ ] Not started",
+      "- [/] In progress",
+    ]);
+    expect(result.uncheckedCount).toBe(2);
+    expect(result.newContent).toBe(["## Tasks", "- [x] Done"].join("\n"));
+  });
+
+  it("counts [/] in-progress items in uncheckedCount", () => {
+    const content = [
+      "## Tasks",
+      "- [/] In progress A",
+      "- [/] In progress B",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.uncheckedCount).toBe(2);
   });
 
   it("handles ### Tasks (deeper heading level)", () => {
