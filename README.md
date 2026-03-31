@@ -14,8 +14,10 @@ When you run the **"Rollover unchecked tasks"** command from the command palette
 2. Finds all unchecked tasks under your `## Tasks` heading
 3. Shows a diff preview of all planned changes and asks for confirmation
 4. Backs up every file it will touch (for one-click undo)
-5. Moves unchecked tasks into today's note under "Rollovers from YYYY-MM-DD" headings
+5. Moves incomplete tasks into today's note under "Rollovers from YYYY-MM-DD" headings
 6. Removes those tasks from the source notes
+
+"Incomplete" means any checkbox that isn't `[x]` or `[X]` — including `[ ]` (not started) and extended markers like `[/]` (in progress). Only fully checked items stay in the source note.
 
 ### Nested checkboxes
 
@@ -58,11 +60,21 @@ Rollovers from 2026-03-24
 
 ## Installation
 
+### Using the install script
+
+```bash
+npm run build        # or: ./install.sh (builds and copies in one step)
+./install.sh         # build + copy to ~/Documents/Personal (default vault)
+./install.sh ~/path/to/vault   # override vault location
+```
+
+Then enable "Sludge Pump" in Obsidian **Settings > Community plugins**.
+
 ### Manual
 
 1. Build the plugin (`npm install && npm run build`) or grab `main.js` from a release
-2. Copy `main.js`, `manifest.json`, and `styles.css` into `<vault>/.obsidian/plugins/sludge-pump/`
-3. Enable "Sludge Pump" in Obsidian Settings > Community plugins
+2. Copy `main.js` and `manifest.json` into `<vault>/.obsidian/plugins/sludge-pump/`
+3. Enable "Sludge Pump" in Obsidian **Settings > Community plugins**
 
 ## Settings
 
