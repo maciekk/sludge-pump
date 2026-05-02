@@ -256,7 +256,7 @@ describe("computeRollover", () => {
     expect(result.newContent).toContain("## Notes");
   });
 
-  it("handles nested checkboxes — unchecked parent rolls over entire subtree", () => {
+  it("handles nested checkboxes — unchecked parent rolls over only unchecked children, leaving completed ones behind", () => {
     const content = [
       "## Tasks",
       "- [ ] Parent task",
@@ -265,10 +265,29 @@ describe("computeRollover", () => {
     ].join("\n");
 
     const result = computeRollover(content, "Tasks")!;
+    // Done sub is left behind; only the unchecked child comes along
     expect(result.rolloverLines).toEqual([
       "- [ ] Parent task",
-      "  - [x] Done sub",
       "  - [ ] Pending sub",
+    ]);
+    expect(result.newContent).toBe(
+      ["## Tasks", "  - [x] Done sub"].join("\n")
+    );
+  });
+
+  it("handles nested checkboxes — unchecked parent with all-unchecked children rolls over entire subtree", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Parent task",
+      "  - [ ] Sub A",
+      "  - [ ] Sub B",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.rolloverLines).toEqual([
+      "- [ ] Parent task",
+      "  - [ ] Sub A",
+      "  - [ ] Sub B",
     ]);
     expect(result.newContent).toBe("## Tasks");
   });

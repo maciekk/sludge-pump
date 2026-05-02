@@ -112,7 +112,7 @@ function getAllLines(node: TaskNode): string[] {
  */
 export function getRemovalIndices(node: TaskNode): number[] {
   if (node.isCheckbox && !node.isChecked) {
-    return getAllIndices(node);
+    return [node.lineIndex, ...node.children.flatMap(getRemovalIndices)];
   }
   if (node.children.some(hasUnchecked)) {
     return node.children.flatMap((child) =>
@@ -131,7 +131,7 @@ export function getRemovalIndices(node: TaskNode): number[] {
  */
 export function getRolloverLines(node: TaskNode): string[] {
   if (node.isCheckbox && !node.isChecked) {
-    return [node.line, ...node.children.flatMap(getAllLines)];
+    return [node.line, ...node.children.flatMap(getRolloverLines)];
   }
   if (node.children.some(hasUnchecked)) {
     return [
