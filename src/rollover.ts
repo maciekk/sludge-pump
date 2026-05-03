@@ -104,15 +104,33 @@ function getAllLines(node: TaskNode): string[] {
 }
 
 /**
+ * Returns true when this node and its entire subtree would be rolled away —
+ * i.e. the node is an unchecked checkbox and every descendant is too.
+ * Checked nodes and plain list items always survive.
+ */
+export function isCompletelyRemoved(node: TaskNode): boolean {
+  if (!node.isCheckbox || node.isChecked) return false;
+  return node.children.every(isCompletelyRemoved);
+}
+
+/**
  * Line indices that should be REMOVED from the source file.
  *
- * - Unchecked checkbox → remove it and entire subtree.
+ * - Unchecked checkbox with no surviving children → remove it and entire subtree.
+ * - Unchecked checkbox with some checked children → keep parent in source
+ *   (to preserve valid tree structure); only remove the fully-unchecked subtrees.
  * - Checked parent with unchecked descendants → keep the parent,
  *   recurse into children to remove unchecked subtrees.
  */
 export function getRemovalIndices(node: TaskNode): number[] {
   if (node.isCheckbox && !node.isChecked) {
-    return [node.lineIndex, ...node.children.flatMap(getRemovalIndices)];
+    if (isCompletelyRemoved(node)) {
+      return getAllIndices(node);
+    }
+    // Parent is duplicated (stays in source for tree validity); remove only fully-gone subtrees
+    return node.children.flatMap((child) =>
+      isCompletelyRemoved(child) ? getAllIndices(child) : getRemovalIndices(child)
+    );
   }
   if (node.children.some(hasUnchecked)) {
     return node.children.flatMap((child) =>

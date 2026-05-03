@@ -7,6 +7,7 @@ import {
   hasUnchecked,
   getRolloverLines,
   getRemovalIndices,
+  isCompletelyRemoved,
   parseTasksSection,
 } from "./rollover";
 
@@ -142,6 +143,41 @@ describe("hasUnchecked", () => {
   });
 });
 
+// ── isCompletelyRemoved ─────────────────────────────────────────────────
+
+describe("isCompletelyRemoved", () => {
+  it("returns true for lone unchecked node", () => {
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, children: [], lineIndex: 0 };
+    expect(isCompletelyRemoved(node)).toBe(true);
+  });
+
+  it("returns false for checked node", () => {
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: true, children: [], lineIndex: 0 };
+    expect(isCompletelyRemoved(node)).toBe(false);
+  });
+
+  it("returns false for unchecked node with a checked child", () => {
+    const node = {
+      line: "", indent: 0, isCheckbox: true, isChecked: false, lineIndex: 0,
+      children: [
+        { line: "", indent: 2, isCheckbox: true, isChecked: true, children: [], lineIndex: 1 },
+      ],
+    };
+    expect(isCompletelyRemoved(node)).toBe(false);
+  });
+
+  it("returns true for unchecked node with all-unchecked children", () => {
+    const node = {
+      line: "", indent: 0, isCheckbox: true, isChecked: false, lineIndex: 0,
+      children: [
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, children: [], lineIndex: 1 },
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, children: [], lineIndex: 2 },
+      ],
+    };
+    expect(isCompletelyRemoved(node)).toBe(true);
+  });
+});
+
 // ── computeRollover ─────────────────────────────────────────────────────
 
 describe("computeRollover", () => {
@@ -256,7 +292,7 @@ describe("computeRollover", () => {
     expect(result.newContent).toContain("## Notes");
   });
 
-  it("handles nested checkboxes — unchecked parent rolls over only unchecked children, leaving completed ones behind", () => {
+  it("handles nested checkboxes — unchecked parent duplicated when some children are checked", () => {
     const content = [
       "## Tasks",
       "- [ ] Parent task",
@@ -265,13 +301,31 @@ describe("computeRollover", () => {
     ].join("\n");
 
     const result = computeRollover(content, "Tasks")!;
-    // Done sub is left behind; only the unchecked child comes along
+    // Parent rolls over with only the unchecked child
     expect(result.rolloverLines).toEqual([
       "- [ ] Parent task",
       "  - [ ] Pending sub",
     ]);
+    // Parent stays in source to keep the tree valid (checked child still has its parent)
     expect(result.newContent).toBe(
-      ["## Tasks", "  - [x] Done sub"].join("\n")
+      ["## Tasks", "- [ ] Parent task", "  - [x] Done sub"].join("\n")
+    );
+  });
+
+  it("handles nested checkboxes — unchecked parent with all checked children stays in source and rolls over alone", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Parent task",
+      "  - [x] Done sub A",
+      "  - [x] Done sub B",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    // Parent rolls over alone (no unchecked children to bring along)
+    expect(result.rolloverLines).toEqual(["- [ ] Parent task"]);
+    // Parent and its checked children stay intact in source
+    expect(result.newContent).toBe(
+      ["## Tasks", "- [ ] Parent task", "  - [x] Done sub A", "  - [x] Done sub B"].join("\n")
     );
   });
 
