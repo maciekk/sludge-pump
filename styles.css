@@ -41,7 +41,7 @@
   line-height: 1.5;
 }
 
-.task-rollover-removed .task-rollover-diff-marker {
+.task-rollover-removed-line .task-rollover-diff-marker {
   color: var(--text-error);
   font-weight: 600;
 }
@@ -53,16 +53,22 @@
 
 .task-rollover-removed-line {
   background-color: rgba(255, 0, 0, 0.12);
+  border-left: 3px solid rgba(255, 0, 0, 0.5);
   /* bleed to the edges of the padded pre block */
   margin-left: -0.8em;
   margin-right: -0.8em;
-  padding-left: 0.8em;
+  padding-left: 0.5em; /* reduced to account for border */
   padding-right: 0.8em;
 }
 
 .task-rollover-context-line {
   color: var(--text-muted);
-  opacity: 0.6;
+  opacity: 0.55;
+}
+
+.task-rollover-context-line .task-rollover-diff-marker {
+  color: var(--text-muted);
+  font-weight: normal;
 }
 
 .task-rollover-removed + .task-rollover-removed {
