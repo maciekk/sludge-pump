@@ -266,6 +266,10 @@ describe("computeRollover", () => {
       "- [ ] Unchecked A",
       "- [ ] Unchecked C",
     ]);
+    expect(result.removedLines).toEqual([
+      "- [ ] Unchecked A",
+      "- [ ] Unchecked C",
+    ]);
     expect(result.uncheckedCount).toBe(2);
 
     // Old content should retain only the checked item
@@ -362,6 +366,8 @@ describe("computeRollover", () => {
       "- [ ] Parent task",
       "  - [ ] Pending sub",
     ]);
+    // Only the unchecked child is removed; parent stays
+    expect(result.removedLines).toEqual(["  - [ ] Pending sub"]);
     // Parent stays in source to keep the tree valid (checked child still has its parent)
     expect(result.newContent).toBe(
       ["## Tasks", "- [ ] Parent task", "  - [x] Done sub"].join("\n")
@@ -416,6 +422,8 @@ describe("computeRollover", () => {
       "- [x] Parent task",
       "  - [ ] Pending sub",
     ]);
+    // Only the unchecked leaf is removed; checked parent is context only
+    expect(result.removedLines).toEqual(["  - [ ] Pending sub"]);
     expect(result.uncheckedCount).toBe(1);
 
     // In old file: parent stays with its checked child; unchecked child removed
@@ -478,6 +486,8 @@ describe("computeRollover", () => {
       "- [ ] Not started",
       "- [/] In progress",
     ]);
+    // Only the unchecked item is removed; in-progress stays in source
+    expect(result.removedLines).toEqual(["- [ ] Not started"]);
     expect(result.uncheckedCount).toBe(2);
     // [/] stays in source; only [ ] is removed
     expect(result.newContent).toBe(
@@ -500,7 +510,8 @@ describe("computeRollover", () => {
       "  - [x] Done sub",
       "  - [ ] Pending sub",
     ]);
-    // Nothing removed from source
+    // Nothing removed from source — entire subtree is preserved
+    expect(result.removedLines).toEqual([]);
     expect(result.newContent).toBe(content);
   });
 
@@ -547,7 +558,8 @@ describe("computeRollover", () => {
 
     const result = computeRollover(content, "Tasks")!;
     expect(result.rolloverLines).toEqual(["- [ ] Normal task"]);
-    // Cancelled item stays in source; unchecked is removed
+    // Only unchecked is removed; cancelled stays
+    expect(result.removedLines).toEqual(["- [ ] Normal task"]);
     expect(result.newContent).toBe(["## Tasks", "- [-] Cancelled task"].join("\n"));
   });
 
@@ -560,7 +572,8 @@ describe("computeRollover", () => {
 
     const result = computeRollover(content, "Tasks")!;
     expect(result.rolloverLines).toEqual(["- [ ] Parent"]);
-    // Parent stays in source (cancelled child pins it), cancelled child also stays
+    // Neither parent nor cancelled child is removed from source
+    expect(result.removedLines).toEqual([]);
     expect(result.newContent).toBe(content);
   });
 

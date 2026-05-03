@@ -95,6 +95,7 @@ export default class TaskRolloverPlugin extends Plugin {
       const rollovers: {
         dateStr: string;
         lines: string[];
+        removedLines: string[];
         file: TFile;
         newContent: string;
         uncheckedCount: number;
@@ -114,6 +115,7 @@ export default class TaskRolloverPlugin extends Plugin {
           rollovers.push({
             dateStr,
             lines: result.rolloverLines,
+            removedLines: result.removedLines,
             file,
             newContent: result.newContent,
             uncheckedCount: result.uncheckedCount,
@@ -134,7 +136,7 @@ export default class TaskRolloverPlugin extends Plugin {
         rollovers.map((r) => ({
           dateStr: r.dateStr,
           filePath: r.file.path,
-          removedLines: r.lines,
+          removedLines: r.removedLines,
           addedLines: r.lines,
         }))
       ).open();

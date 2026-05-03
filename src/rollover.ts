@@ -34,6 +34,8 @@ export interface GroupInfo {
 export interface RolloverComputation {
   /** Lines to insert into today's note (under the date heading) */
   rolloverLines: string[];
+  /** Lines actually deleted from the source file */
+  removedLines: string[];
   /** The modified content of the source file (unchecked items removed) */
   newContent: string;
   /** Number of unchecked checkbox items rolled over */
@@ -338,8 +340,11 @@ export function computeRollover(
     }
   }
 
+  const removedLines = lines.filter((_, i) => removeSet.has(i));
+
   return {
     rolloverLines: allRolloverLines,
+    removedLines,
     newContent: cleaned.join("\n"),
     uncheckedCount,
   };
