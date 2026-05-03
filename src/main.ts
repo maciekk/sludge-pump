@@ -363,7 +363,7 @@ class RolloverConfirmModal extends Modal {
           for (const diffLine of hunk) {
             const lineEl = hunkBlock.createEl("div", {
               cls: diffLine.removed
-                ? "task-rollover-diff-line"
+                ? "task-rollover-diff-line task-rollover-removed-line"
                 : "task-rollover-diff-line task-rollover-context-line",
             });
             lineEl.createSpan({

@@ -27,8 +27,8 @@
 }
 
 .task-rollover-removed {
-  background-color: rgba(255, 0, 0, 0.06);
-  border: 1px solid rgba(255, 0, 0, 0.15);
+  background-color: transparent;
+  border: 1px solid rgba(255, 0, 0, 0.2);
 }
 
 .task-rollover-added {
@@ -51,8 +51,18 @@
   font-weight: 600;
 }
 
+.task-rollover-removed-line {
+  background-color: rgba(255, 0, 0, 0.12);
+  /* bleed to the edges of the padded pre block */
+  margin-left: -0.8em;
+  margin-right: -0.8em;
+  padding-left: 0.8em;
+  padding-right: 0.8em;
+}
+
 .task-rollover-context-line {
   color: var(--text-muted);
+  opacity: 0.6;
 }
 
 .task-rollover-removed + .task-rollover-removed {
