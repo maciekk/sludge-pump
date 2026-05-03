@@ -31,11 +31,22 @@ export interface GroupInfo {
   }[];
 }
 
+export interface DiffLine {
+  content: string;
+  removed: boolean;
+}
+
 export interface RolloverComputation {
   /** Lines to insert into today's note (under the date heading) */
   rolloverLines: string[];
   /** Lines actually deleted from the source file */
   removedLines: string[];
+  /**
+   * Contiguous hunks of removed lines with surrounding context, for display.
+   * Each hunk is an array of DiffLine where removed=true lines are deletions
+   * and removed=false lines are context.
+   */
+  removalHunks: DiffLine[][];
   /** The modified content of the source file (unchecked items removed) */
   newContent: string;
   /** Number of unchecked checkbox items rolled over */
@@ -342,9 +353,43 @@ export function computeRollover(
 
   const removedLines = lines.filter((_, i) => removeSet.has(i));
 
+  // Build display hunks: group removed indices into contiguous runs,
+  // expand each run by CONTEXT lines, merge overlapping expansions.
+  const CONTEXT = 2;
+  const sortedRemoveIndices = [...removeSet].sort((a, b) => a - b);
+  const runs: number[][] = [];
+  for (const idx of sortedRemoveIndices) {
+    const last = runs[runs.length - 1];
+    if (!last || idx > last[last.length - 1] + 1) {
+      runs.push([idx]);
+    } else {
+      last.push(idx);
+    }
+  }
+  const hunkRanges: { start: number; end: number; removeIndices: number[] }[] = [];
+  for (const run of runs) {
+    const start = Math.max(0, run[0] - CONTEXT);
+    const end = Math.min(lines.length - 1, run[run.length - 1] + CONTEXT);
+    const prev = hunkRanges[hunkRanges.length - 1];
+    if (prev && start <= prev.end + 1) {
+      prev.end = Math.max(prev.end, end);
+      prev.removeIndices.push(...run);
+    } else {
+      hunkRanges.push({ start, end, removeIndices: [...run] });
+    }
+  }
+  const removalHunks: DiffLine[][] = hunkRanges.map(({ start, end, removeIndices }) => {
+    const hunkSet = new Set(removeIndices);
+    return Array.from({ length: end - start + 1 }, (_, i) => ({
+      content: lines[start + i],
+      removed: hunkSet.has(start + i),
+    }));
+  });
+
   return {
     rolloverLines: allRolloverLines,
     removedLines,
+    removalHunks,
     newContent: cleaned.join("\n"),
     uncheckedCount,
   };

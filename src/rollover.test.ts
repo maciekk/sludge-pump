@@ -598,6 +598,79 @@ describe("computeRollover", () => {
     );
   });
 
+  it("removalHunks: two non-contiguous deletions produce two separate hunks", () => {
+    // Five checked items between the two unchecked ones so their context windows don't overlap
+    const content = [
+      "## Tasks",
+      "- [ ] Task A",
+      "- [x] Done 1",
+      "- [x] Done 2",
+      "- [x] Done 3",
+      "- [x] Done 4",
+      "- [x] Done 5",
+      "- [ ] Task B",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.removalHunks).toHaveLength(2);
+    expect(result.removalHunks[0].filter((l) => l.removed).map((l) => l.content)).toEqual([
+      "- [ ] Task A",
+    ]);
+    expect(result.removalHunks[1].filter((l) => l.removed).map((l) => l.content)).toEqual([
+      "- [ ] Task B",
+    ]);
+    // Both hunks include context lines
+    expect(result.removalHunks[0].some((l) => !l.removed)).toBe(true);
+    expect(result.removalHunks[1].some((l) => !l.removed)).toBe(true);
+  });
+
+  it("removalHunks: contiguous deletions produce one hunk with context", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Task A",
+      "- [ ] Task B",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.removalHunks).toHaveLength(1);
+    const hunk = result.removalHunks[0];
+    expect(hunk.filter((l) => l.removed).map((l) => l.content)).toEqual([
+      "- [ ] Task A",
+      "- [ ] Task B",
+    ]);
+    // ## Tasks heading appears as context before the deletions
+    expect(hunk.filter((l) => !l.removed).map((l) => l.content)).toContain("## Tasks");
+  });
+
+  it("removalHunks: [/] in-progress produces zero hunks (nothing deleted)", () => {
+    const content = [
+      "## Tasks",
+      "- [/] In progress",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.removalHunks).toHaveLength(0);
+  });
+
+  it("removalHunks: partial tree — context shows surviving parent and sibling", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Parent",
+      "  - [x] Done sub",
+      "  - [ ] Pending sub",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.removalHunks).toHaveLength(1);
+    const hunk = result.removalHunks[0];
+    const removed = hunk.filter((l) => l.removed).map((l) => l.content);
+    const context = hunk.filter((l) => !l.removed).map((l) => l.content);
+    expect(removed).toEqual(["  - [ ] Pending sub"]);
+    // Parent and done-sub appear as context
+    expect(context).toContain("- [ ] Parent");
+    expect(context).toContain("  - [x] Done sub");
+  });
+
   it("handles ### Tasks (deeper heading level)", () => {
     const content = [
       "## Daily",

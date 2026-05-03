@@ -7,7 +7,7 @@ import {
   Setting,
   Modal,
 } from "obsidian";
-import { computeRollover, insertRollovers } from "./rollover";
+import { computeRollover, insertRollovers, DiffLine } from "./rollover";
 
 // ── Settings ────────────────────────────────────────────────────────────
 
@@ -95,7 +95,7 @@ export default class TaskRolloverPlugin extends Plugin {
       const rollovers: {
         dateStr: string;
         lines: string[];
-        removedLines: string[];
+        removalHunks: DiffLine[][];
         file: TFile;
         newContent: string;
         uncheckedCount: number;
@@ -115,7 +115,7 @@ export default class TaskRolloverPlugin extends Plugin {
           rollovers.push({
             dateStr,
             lines: result.rolloverLines,
-            removedLines: result.removedLines,
+            removalHunks: result.removalHunks,
             file,
             newContent: result.newContent,
             uncheckedCount: result.uncheckedCount,
@@ -136,7 +136,7 @@ export default class TaskRolloverPlugin extends Plugin {
         rollovers.map((r) => ({
           dateStr: r.dateStr,
           filePath: r.file.path,
-          removedLines: r.removedLines,
+          removalHunks: r.removalHunks,
           addedLines: r.lines,
         }))
       ).open();
@@ -306,7 +306,7 @@ export default class TaskRolloverPlugin extends Plugin {
 interface RolloverDiffEntry {
   dateStr: string;
   filePath: string;
-  removedLines: string[];
+  removalHunks: DiffLine[][];
   addedLines: string[];
 }
 
@@ -350,15 +350,29 @@ class RolloverConfirmModal extends Modal {
         cls: "task-rollover-file-heading",
       });
 
-      const removeBlock = section.createEl("pre", {
-        cls: "task-rollover-diff task-rollover-removed",
-      });
-      for (const line of entry.removedLines) {
-        const lineEl = removeBlock.createEl("div", {
-          cls: "task-rollover-diff-line",
+      if (entry.removalHunks.length === 0) {
+        section.createEl("p", {
+          text: "No lines removed from this file.",
+          cls: "task-rollover-no-removals",
         });
-        lineEl.createSpan({ text: "- ", cls: "task-rollover-diff-marker" });
-        lineEl.createSpan({ text: line });
+      } else {
+        for (const hunk of entry.removalHunks) {
+          const hunkBlock = section.createEl("pre", {
+            cls: "task-rollover-diff task-rollover-removed",
+          });
+          for (const diffLine of hunk) {
+            const lineEl = hunkBlock.createEl("div", {
+              cls: diffLine.removed
+                ? "task-rollover-diff-line"
+                : "task-rollover-diff-line task-rollover-context-line",
+            });
+            lineEl.createSpan({
+              text: diffLine.removed ? "- " : "  ",
+              cls: "task-rollover-diff-marker",
+            });
+            lineEl.createSpan({ text: diffLine.content });
+          }
+        }
       }
     }
 

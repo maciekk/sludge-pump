@@ -51,6 +51,21 @@
   font-weight: 600;
 }
 
+.task-rollover-context-line {
+  color: var(--text-muted);
+}
+
+.task-rollover-removed + .task-rollover-removed {
+  margin-top: 0.4em;
+}
+
+.task-rollover-no-removals {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.85em;
+  margin: 0;
+}
+
 .task-rollover-buttons {
   display: flex;
   justify-content: flex-end;
