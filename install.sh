@@ -9,7 +9,7 @@ echo "Building..."
 npm run build
 
 echo "Installing to $PLUGIN_DIR..."
-cp main.js manifest.json "$PLUGIN_DIR/"
+cp main.js manifest.json styles.css "$PLUGIN_DIR/"
 
 echo ""
 echo "Done! If Obsidian is running, reload the plugin to pick up the changes:"
