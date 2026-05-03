@@ -577,6 +577,27 @@ describe("computeRollover", () => {
     expect(result.newContent).toBe(content);
   });
 
+  it("[-] cancelled sibling does not suppress unchecked sibling — unchecked still rolls over", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Parent",
+      "  - [-] Cancelled child",
+      "  - [ ] Unchecked child",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    // Parent as context + unchecked child
+    expect(result.rolloverLines).toEqual([
+      "- [ ] Parent",
+      "  - [ ] Unchecked child",
+    ]);
+    // Only the unchecked child is removed; parent and cancelled child stay
+    expect(result.removedLines).toEqual(["  - [ ] Unchecked child"]);
+    expect(result.newContent).toBe(
+      ["## Tasks", "- [ ] Parent", "  - [-] Cancelled child"].join("\n")
+    );
+  });
+
   it("handles ### Tasks (deeper heading level)", () => {
     const content = [
       "## Daily",
