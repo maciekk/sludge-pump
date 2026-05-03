@@ -4,11 +4,14 @@
 
 // ── Data types ──────────────────────────────────────────────────────────
 
+export type CheckState = "unchecked" | "checked" | "cancelled" | "in-progress";
+
 export interface TaskNode {
   line: string;
   indent: number;
   isCheckbox: boolean;
   isChecked: boolean;
+  checkState: CheckState | null; // null for non-checkbox items
   children: TaskNode[];
   lineIndex: number; // original line number in the file
 }
@@ -23,6 +26,7 @@ export interface GroupInfo {
     indent: number;
     isCheckbox: boolean;
     isChecked: boolean;
+    checkState: CheckState | null;
     lineIndex: number;
   }[];
 }
@@ -40,18 +44,21 @@ export interface RolloverComputation {
 
 export function parseListItem(
   line: string
-): { indent: number; isCheckbox: boolean; isChecked: boolean } | null {
+): { indent: number; isCheckbox: boolean; isChecked: boolean; checkState: CheckState | null } | null {
   const cbMatch = line.match(/^(\s*)-\s+\[(.)\]/);
   if (cbMatch) {
-    return {
-      indent: cbMatch[1].length,
-      isCheckbox: true,
-      isChecked: cbMatch[2] === "x" || cbMatch[2] === "X",
-    };
+    const marker = cbMatch[2];
+    const isChecked = marker === "x" || marker === "X";
+    let checkState: CheckState;
+    if (marker === "x" || marker === "X") checkState = "checked";
+    else if (marker === "-") checkState = "cancelled";
+    else if (marker === "/") checkState = "in-progress";
+    else checkState = "unchecked";
+    return { indent: cbMatch[1].length, isCheckbox: true, isChecked, checkState };
   }
   const listMatch = line.match(/^(\s*)-\s+/);
   if (listMatch) {
-    return { indent: listMatch[1].length, isCheckbox: false, isChecked: false };
+    return { indent: listMatch[1].length, isCheckbox: false, isChecked: false, checkState: null };
   }
   return null;
 }
@@ -87,9 +94,12 @@ export function buildTree(
 
 // ── Tree queries ────────────────────────────────────────────────────────
 
-/** Does this node or any descendant contain an unchecked checkbox? */
+/** Does this node or any non-cancelled descendant need to roll over? */
 export function hasUnchecked(node: TaskNode): boolean {
-  if (node.isCheckbox && !node.isChecked) return true;
+  if (node.isCheckbox) {
+    if (node.checkState === "cancelled") return false; // suppresses entire subtree
+    if (node.checkState === "unchecked" || node.checkState === "in-progress") return true;
+  }
   return node.children.some(hasUnchecked);
 }
 
@@ -106,10 +116,10 @@ function getAllLines(node: TaskNode): string[] {
 /**
  * Returns true when this node and its entire subtree would be rolled away —
  * i.e. the node is an unchecked checkbox and every descendant is too.
- * Checked nodes and plain list items always survive.
+ * Checked, cancelled, and in-progress nodes always survive in source.
  */
 export function isCompletelyRemoved(node: TaskNode): boolean {
-  if (!node.isCheckbox || node.isChecked) return false;
+  if (!node.isCheckbox || node.checkState !== "unchecked") return false;
   return node.children.every(isCompletelyRemoved);
 }
 
@@ -117,17 +127,18 @@ export function isCompletelyRemoved(node: TaskNode): boolean {
  * Line indices that should be REMOVED from the source file.
  *
  * - Unchecked checkbox with no surviving children → remove it and entire subtree.
- * - Unchecked checkbox with some checked children → keep parent in source
- *   (to preserve valid tree structure); only remove the fully-unchecked subtrees.
- * - Checked parent with unchecked descendants → keep the parent,
- *   recurse into children to remove unchecked subtrees.
+ * - Unchecked checkbox with some checked/cancelled/in-progress children → keep parent
+ *   in source (to preserve valid tree structure); only remove fully-unchecked subtrees.
+ * - Checked parent with rollover descendants → keep the parent, recurse into children.
+ * - Cancelled or in-progress nodes → never removed (stay in source).
  */
 export function getRemovalIndices(node: TaskNode): number[] {
-  if (node.isCheckbox && !node.isChecked) {
+  if (node.checkState === "cancelled" || node.checkState === "in-progress") return [];
+  if (node.isCheckbox && node.checkState === "unchecked") {
     if (isCompletelyRemoved(node)) {
       return getAllIndices(node);
     }
-    // Parent is duplicated (stays in source for tree validity); remove only fully-gone subtrees
+    // Parent stays in source for tree validity; remove only fully-gone subtrees
     return node.children.flatMap((child) =>
       isCompletelyRemoved(child) ? getAllIndices(child) : getRemovalIndices(child)
     );
@@ -143,12 +154,16 @@ export function getRemovalIndices(node: TaskNode): number[] {
 /**
  * Lines to INSERT into today's note.
  *
- * - Unchecked checkbox → include it and entire subtree.
- * - Checked parent with unchecked descendants → include parent as context,
+ * - Cancelled checkbox → nothing (suppresses entire subtree).
+ * - In-progress checkbox → duplicate entire subtree as-is.
+ * - Unchecked checkbox → include it and recurse into children.
+ * - Checked parent with rollover descendants → include parent as context,
  *   recurse into children.
  */
 export function getRolloverLines(node: TaskNode): string[] {
-  if (node.isCheckbox && !node.isChecked) {
+  if (node.checkState === "cancelled") return [];
+  if (node.checkState === "in-progress") return getAllLines(node);
+  if (node.isCheckbox && node.checkState === "unchecked") {
     return [node.line, ...node.children.flatMap(getRolloverLines)];
   }
   if (node.children.some(hasUnchecked)) {

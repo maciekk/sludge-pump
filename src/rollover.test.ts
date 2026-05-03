@@ -19,6 +19,7 @@ describe("parseListItem", () => {
       indent: 0,
       isCheckbox: true,
       isChecked: false,
+      checkState: "unchecked",
     });
   });
 
@@ -27,6 +28,7 @@ describe("parseListItem", () => {
       indent: 0,
       isCheckbox: true,
       isChecked: true,
+      checkState: "checked",
     });
   });
 
@@ -35,23 +37,35 @@ describe("parseListItem", () => {
       indent: 0,
       isCheckbox: true,
       isChecked: true,
+      checkState: "checked",
     });
   });
 
-  it("parses in-progress [/] as unchecked", () => {
+  it("parses in-progress [/]", () => {
     expect(parseListItem("- [/] In progress")).toEqual({
       indent: 0,
       isCheckbox: true,
       isChecked: false,
+      checkState: "in-progress",
     });
   });
 
-  it("parses other extended markers ([-], [?], [!]) as unchecked", () => {
-    for (const marker of ["-", "?", "!"]) {
+  it("parses cancelled [-]", () => {
+    expect(parseListItem("- [-] Cancelled")).toEqual({
+      indent: 0,
+      isCheckbox: true,
+      isChecked: false,
+      checkState: "cancelled",
+    });
+  });
+
+  it("parses other extended markers ([?], [!]) as unchecked", () => {
+    for (const marker of ["?", "!"]) {
       expect(parseListItem(`- [${marker}] Item`)).toEqual({
         indent: 0,
         isCheckbox: true,
         isChecked: false,
+        checkState: "unchecked",
       });
     }
   });
@@ -61,6 +75,7 @@ describe("parseListItem", () => {
       indent: 2,
       isCheckbox: true,
       isChecked: false,
+      checkState: "unchecked",
     });
   });
 
@@ -69,6 +84,7 @@ describe("parseListItem", () => {
       indent: 0,
       isCheckbox: false,
       isChecked: false,
+      checkState: null,
     });
   });
 
@@ -123,23 +139,43 @@ describe("buildTree", () => {
 
 describe("hasUnchecked", () => {
   it("returns true for unchecked node", () => {
-    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, children: [], lineIndex: 0 };
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 0 };
     expect(hasUnchecked(node)).toBe(true);
   });
 
   it("returns false for checked node with no children", () => {
-    const node = { line: "", indent: 0, isCheckbox: true, isChecked: true, children: [], lineIndex: 0 };
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: true, checkState: "checked" as const, children: [], lineIndex: 0 };
     expect(hasUnchecked(node)).toBe(false);
   });
 
   it("returns true for checked parent with unchecked child", () => {
     const node = {
-      line: "", indent: 0, isCheckbox: true, isChecked: true, lineIndex: 0,
+      line: "", indent: 0, isCheckbox: true, isChecked: true, checkState: "checked" as const, lineIndex: 0,
       children: [
-        { line: "", indent: 2, isCheckbox: true, isChecked: false, children: [], lineIndex: 1 },
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 1 },
       ],
     };
     expect(hasUnchecked(node)).toBe(true);
+  });
+
+  it("returns true for in-progress node", () => {
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "in-progress" as const, children: [], lineIndex: 0 };
+    expect(hasUnchecked(node)).toBe(true);
+  });
+
+  it("returns false for cancelled node", () => {
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "cancelled" as const, children: [], lineIndex: 0 };
+    expect(hasUnchecked(node)).toBe(false);
+  });
+
+  it("returns false for cancelled parent even with unchecked children", () => {
+    const node = {
+      line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "cancelled" as const, lineIndex: 0,
+      children: [
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 1 },
+      ],
+    };
+    expect(hasUnchecked(node)).toBe(false);
   });
 });
 
@@ -147,20 +183,40 @@ describe("hasUnchecked", () => {
 
 describe("isCompletelyRemoved", () => {
   it("returns true for lone unchecked node", () => {
-    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, children: [], lineIndex: 0 };
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 0 };
     expect(isCompletelyRemoved(node)).toBe(true);
   });
 
   it("returns false for checked node", () => {
-    const node = { line: "", indent: 0, isCheckbox: true, isChecked: true, children: [], lineIndex: 0 };
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: true, checkState: "checked" as const, children: [], lineIndex: 0 };
+    expect(isCompletelyRemoved(node)).toBe(false);
+  });
+
+  it("returns false for cancelled node", () => {
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "cancelled" as const, children: [], lineIndex: 0 };
+    expect(isCompletelyRemoved(node)).toBe(false);
+  });
+
+  it("returns false for in-progress node", () => {
+    const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "in-progress" as const, children: [], lineIndex: 0 };
     expect(isCompletelyRemoved(node)).toBe(false);
   });
 
   it("returns false for unchecked node with a checked child", () => {
     const node = {
-      line: "", indent: 0, isCheckbox: true, isChecked: false, lineIndex: 0,
+      line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, lineIndex: 0,
       children: [
-        { line: "", indent: 2, isCheckbox: true, isChecked: true, children: [], lineIndex: 1 },
+        { line: "", indent: 2, isCheckbox: true, isChecked: true, checkState: "checked" as const, children: [], lineIndex: 1 },
+      ],
+    };
+    expect(isCompletelyRemoved(node)).toBe(false);
+  });
+
+  it("returns false for unchecked node with a cancelled child", () => {
+    const node = {
+      line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, lineIndex: 0,
+      children: [
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "cancelled" as const, children: [], lineIndex: 1 },
       ],
     };
     expect(isCompletelyRemoved(node)).toBe(false);
@@ -168,10 +224,10 @@ describe("isCompletelyRemoved", () => {
 
   it("returns true for unchecked node with all-unchecked children", () => {
     const node = {
-      line: "", indent: 0, isCheckbox: true, isChecked: false, lineIndex: 0,
+      line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, lineIndex: 0,
       children: [
-        { line: "", indent: 2, isCheckbox: true, isChecked: false, children: [], lineIndex: 1 },
-        { line: "", indent: 2, isCheckbox: true, isChecked: false, children: [], lineIndex: 2 },
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 1 },
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 2 },
       ],
     };
     expect(isCompletelyRemoved(node)).toBe(true);
@@ -409,7 +465,7 @@ describe("computeRollover", () => {
     expect(result.newContent).not.toContain("Do something");
   });
 
-  it("rolls over in-progress [/] items and keeps only [x] in old note", () => {
+  it("rolls over [/] in-progress items AND keeps them in source (duplicated)", () => {
     const content = [
       "## Tasks",
       "- [ ] Not started",
@@ -423,7 +479,29 @@ describe("computeRollover", () => {
       "- [/] In progress",
     ]);
     expect(result.uncheckedCount).toBe(2);
-    expect(result.newContent).toBe(["## Tasks", "- [x] Done"].join("\n"));
+    // [/] stays in source; only [ ] is removed
+    expect(result.newContent).toBe(
+      ["## Tasks", "- [/] In progress", "- [x] Done"].join("\n")
+    );
+  });
+
+  it("duplicates [/] in-progress with its entire subtree", () => {
+    const content = [
+      "## Tasks",
+      "- [/] In progress",
+      "  - [x] Done sub",
+      "  - [ ] Pending sub",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    // Whole subtree is duplicated into rollover
+    expect(result.rolloverLines).toEqual([
+      "- [/] In progress",
+      "  - [x] Done sub",
+      "  - [ ] Pending sub",
+    ]);
+    // Nothing removed from source
+    expect(result.newContent).toBe(content);
   });
 
   it("counts [/] in-progress items in uncheckedCount", () => {
@@ -435,6 +513,55 @@ describe("computeRollover", () => {
 
     const result = computeRollover(content, "Tasks")!;
     expect(result.uncheckedCount).toBe(2);
+    // Source unchanged — both items are duplicated, not removed
+    expect(result.newContent).toBe(content);
+  });
+
+  it("does not roll over [-] cancelled items", () => {
+    const content = [
+      "## Tasks",
+      "- [-] Cancelled",
+      "- [x] Done",
+    ].join("\n");
+
+    expect(computeRollover(content, "Tasks")).toBeNull();
+  });
+
+  it("[-] cancelled suppresses its entire subtree — unchecked children don't roll over", () => {
+    const content = [
+      "## Tasks",
+      "- [-] Cancelled parent",
+      "  - [ ] Unchecked child",
+      "  - [ ] Another unchecked",
+    ].join("\n");
+
+    expect(computeRollover(content, "Tasks")).toBeNull();
+  });
+
+  it("[-] cancelled is preserved in source alongside unchecked siblings", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Normal task",
+      "- [-] Cancelled task",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.rolloverLines).toEqual(["- [ ] Normal task"]);
+    // Cancelled item stays in source; unchecked is removed
+    expect(result.newContent).toBe(["## Tasks", "- [-] Cancelled task"].join("\n"));
+  });
+
+  it("[-] cancelled child under unchecked parent: parent rolls over alone, cancelled child stays", () => {
+    const content = [
+      "## Tasks",
+      "- [ ] Parent",
+      "  - [-] Cancelled child",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.rolloverLines).toEqual(["- [ ] Parent"]);
+    // Parent stays in source (cancelled child pins it), cancelled child also stays
+    expect(result.newContent).toBe(content);
   });
 
   it("handles ### Tasks (deeper heading level)", () => {
