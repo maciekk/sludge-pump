@@ -197,8 +197,30 @@ describe("isCompletelyRemoved", () => {
     expect(isCompletelyRemoved(node)).toBe(false);
   });
 
-  it("returns false for in-progress node", () => {
+  it("returns true for in-progress node with no children (no work done)", () => {
     const node = { line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "in-progress" as const, children: [], lineIndex: 0 };
+    expect(isCompletelyRemoved(node)).toBe(true);
+  });
+
+  it("returns true for in-progress node with only unchecked children", () => {
+    const node = {
+      line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "in-progress" as const, lineIndex: 0,
+      children: [
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 1 },
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 2 },
+      ],
+    };
+    expect(isCompletelyRemoved(node)).toBe(true);
+  });
+
+  it("returns false for in-progress node with a checked child", () => {
+    const node = {
+      line: "", indent: 0, isCheckbox: true, isChecked: false, checkState: "in-progress" as const, lineIndex: 0,
+      children: [
+        { line: "", indent: 2, isCheckbox: true, isChecked: true, checkState: "checked" as const, children: [], lineIndex: 1 },
+        { line: "", indent: 2, isCheckbox: true, isChecked: false, checkState: "unchecked" as const, children: [], lineIndex: 2 },
+      ],
+    };
     expect(isCompletelyRemoved(node)).toBe(false);
   });
 
@@ -473,7 +495,7 @@ describe("computeRollover", () => {
     expect(result.newContent).not.toContain("Do something");
   });
 
-  it("rolls over [/] in-progress items AND keeps them in source (duplicated)", () => {
+  it("rolls over [/] in-progress items with no children and removes them from source", () => {
     const content = [
       "## Tasks",
       "- [ ] Not started",
@@ -486,16 +508,39 @@ describe("computeRollover", () => {
       "- [ ] Not started",
       "- [/] In progress",
     ]);
-    // Only the unchecked item is removed; in-progress stays in source
-    expect(result.removedLines).toEqual(["- [ ] Not started"]);
+    // Both not-started and in-progress (no work done) are removed from source
+    expect(result.removedLines).toEqual(["- [ ] Not started", "- [/] In progress"]);
     expect(result.uncheckedCount).toBe(2);
-    // [/] stays in source; only [ ] is removed
+    // Only the done item remains in source
     expect(result.newContent).toBe(
-      ["## Tasks", "- [/] In progress", "- [x] Done"].join("\n")
+      ["## Tasks", "- [x] Done"].join("\n")
     );
   });
 
-  it("duplicates [/] in-progress with its entire subtree", () => {
+  it("[/] with only unchecked children moves (not copies) — entire subtree removed from source", () => {
+    const content = [
+      "## Tasks",
+      "- [/] In progress",
+      "  - [ ] Sub A",
+      "  - [ ] Sub B",
+    ].join("\n");
+
+    const result = computeRollover(content, "Tasks")!;
+    expect(result.rolloverLines).toEqual([
+      "- [/] In progress",
+      "  - [ ] Sub A",
+      "  - [ ] Sub B",
+    ]);
+    // Entire subtree removed from source (no progress made)
+    expect(result.removedLines).toEqual([
+      "- [/] In progress",
+      "  - [ ] Sub A",
+      "  - [ ] Sub B",
+    ]);
+    expect(result.newContent).toBe("## Tasks");
+  });
+
+  it("[/] with a checked child stays in source (work was done that day)", () => {
     const content = [
       "## Tasks",
       "- [/] In progress",
@@ -504,13 +549,13 @@ describe("computeRollover", () => {
     ].join("\n");
 
     const result = computeRollover(content, "Tasks")!;
-    // Whole subtree is duplicated into rollover
+    // Whole subtree is duplicated into rollover (partially-completed case)
     expect(result.rolloverLines).toEqual([
       "- [/] In progress",
       "  - [x] Done sub",
       "  - [ ] Pending sub",
     ]);
-    // Nothing removed from source — entire subtree is preserved
+    // Nothing removed from source — progress was made, keep in source as history
     expect(result.removedLines).toEqual([]);
     expect(result.newContent).toBe(content);
   });
@@ -524,8 +569,8 @@ describe("computeRollover", () => {
 
     const result = computeRollover(content, "Tasks")!;
     expect(result.uncheckedCount).toBe(2);
-    // Source unchanged — both items are duplicated, not removed
-    expect(result.newContent).toBe(content);
+    // No checked descendants → both move out of source
+    expect(result.newContent).toBe("## Tasks");
   });
 
   it("does not roll over [-] cancelled items", () => {
@@ -642,14 +687,17 @@ describe("computeRollover", () => {
     expect(hunk.filter((l) => !l.removed).map((l) => l.content)).toContain("## Tasks");
   });
 
-  it("removalHunks: [/] in-progress produces zero hunks (nothing deleted)", () => {
+  it("removalHunks: [/] in-progress with no children produces a hunk (item is moved)", () => {
     const content = [
       "## Tasks",
       "- [/] In progress",
     ].join("\n");
 
     const result = computeRollover(content, "Tasks")!;
-    expect(result.removalHunks).toHaveLength(0);
+    expect(result.removalHunks).toHaveLength(1);
+    expect(result.removalHunks[0].filter((l) => l.removed).map((l) => l.content)).toEqual([
+      "- [/] In progress",
+    ]);
   });
 
   it("removalHunks: partial tree — context shows surviving parent and sibling", () => {

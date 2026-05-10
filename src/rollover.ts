@@ -127,13 +127,28 @@ function getAllLines(node: TaskNode): string[] {
 }
 
 /**
- * Returns true when this node and its entire subtree would be rolled away —
- * i.e. the node is an unchecked checkbox and every descendant is too.
- * Checked, cancelled, and in-progress nodes always survive in source.
+ * Returns true if node has no checked or cancelled checkbox descendants.
+ * Used to detect [/] items where no work was done (all children still unchecked).
+ */
+function hasNoCheckedDescendants(node: TaskNode): boolean {
+  return node.children.every((child) => {
+    if (child.isCheckbox && (child.checkState === "checked" || child.checkState === "cancelled")) return false;
+    return hasNoCheckedDescendants(child);
+  });
+}
+
+/**
+ * Returns true when this node and its entire subtree would be rolled away.
+ * - Unchecked checkbox: true iff every descendant is also completely removed.
+ * - In-progress checkbox: true iff no checked/cancelled descendants (no work done yet).
+ * - Checked, cancelled nodes: always false (survive in source).
  */
 export function isCompletelyRemoved(node: TaskNode): boolean {
-  if (!node.isCheckbox || node.checkState !== "unchecked") return false;
-  return node.children.every(isCompletelyRemoved);
+  if (!node.isCheckbox) return false;
+  if (node.checkState === "checked" || node.checkState === "cancelled") return false;
+  if (node.checkState === "unchecked") return node.children.every(isCompletelyRemoved);
+  if (node.checkState === "in-progress") return hasNoCheckedDescendants(node);
+  return false;
 }
 
 /**
@@ -143,10 +158,15 @@ export function isCompletelyRemoved(node: TaskNode): boolean {
  * - Unchecked checkbox with some checked/cancelled/in-progress children → keep parent
  *   in source (to preserve valid tree structure); only remove fully-unchecked subtrees.
  * - Checked parent with rollover descendants → keep the parent, recurse into children.
- * - Cancelled or in-progress nodes → never removed (stay in source).
+ * - Cancelled nodes → never removed (stay in source).
+ * - In-progress with no checked descendants → remove (no work done, move don't copy).
+ * - In-progress with checked descendants → keep in source (work was done that day).
  */
 export function getRemovalIndices(node: TaskNode): number[] {
-  if (node.checkState === "cancelled" || node.checkState === "in-progress") return [];
+  if (node.checkState === "cancelled") return [];
+  if (node.checkState === "in-progress") {
+    return hasNoCheckedDescendants(node) ? getAllIndices(node) : [];
+  }
   if (node.isCheckbox && node.checkState === "unchecked") {
     if (isCompletelyRemoved(node)) {
       return getAllIndices(node);
